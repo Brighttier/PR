@@ -99,5 +99,5 @@ env:
 buildConfig:
   runtime: nodejs20
   rootDirectory: frontend
-  buildCommand: npm run build
+  buildCommand: npm run build -- --webpack
   installCommand: npm ci
