@@ -31,6 +31,9 @@ const nextConfig: NextConfig = {
     },
   },
 
+  // Turbopack configuration (Next.js 16+)
+  turbopack: {},
+
   // Webpack configuration
   webpack: (config, { isServer }) => {
     // Fix for Firebase Admin SDK in client bundle
