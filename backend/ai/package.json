@@ -1,0 +1,29 @@
+{
+  "name": "@persona-recruit/ai-services",
+  "version": "1.0.0",
+  "description": "AI services for Persona Recruit using Google Gemini",
+  "main": "gemini/index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "gemini",
+    "ai",
+    "recruitment",
+    "resume-parsing",
+    "job-matching"
+  ],
+  "author": "Persona Recruit",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "firebase-admin": "^12.0.0",
+    "firebase-functions": "^5.0.0",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.25",
+    "@types/ws": "^8.18.1",
+    "typescript": "^5.3.0"
+  }
+}

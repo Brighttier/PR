@@ -1,6 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/contexts/AuthContext";
 import { RecruiterSidebar } from "@/components/recruiter/sidebar";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -55,6 +58,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { CreateJobDialog } from "@/components/jobs/create-job-dialog";
+import { EditJobDialog } from "@/components/jobs/edit-job-dialog";
+import { DeleteConfirmationDialog } from "@/components/dialogs/delete-confirmation-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 type JobStatus = "published" | "draft" | "closed" | "paused";
 
@@ -64,151 +71,117 @@ interface Job {
   department: string;
   location: string;
   type: string;
-  experience: string;
-  salary: string;
+  experienceLevel: string;
+  salaryMin: number | null;
+  salaryMax: number | null;
   status: JobStatus;
-  applicants: number;
-  views: number;
-  matchScore: number;
-  postedDate: string;
-  closingDate: string;
+  applicants?: number;
+  views?: number;
+  createdAt: any;
+  updatedAt?: any;
   description: string;
   requirements: string[];
   benefits: string[];
-  aiGenerated: boolean;
+  companyId: string;
+  companyName?: string;
 }
 
 export default function RecruiterJobsPage() {
+  const { userProfile } = useAuth();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [jobToEdit, setJobToEdit] = useState<Job | null>(null);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [jobToDelete, setJobToDelete] = useState<Job | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // Mock data
-  const jobs: Job[] = [
-    {
-      id: "1",
-      title: "Senior Frontend Developer",
-      department: "Engineering",
-      location: "San Francisco, CA",
-      type: "Full-time",
-      experience: "5+ years",
-      salary: "$120k - $160k",
-      status: "published",
-      applicants: 45,
-      views: 234,
-      matchScore: 87,
-      postedDate: "2025-01-05",
-      closingDate: "2025-02-05",
-      description: "We are looking for an experienced Frontend Developer to join our team and help build amazing user experiences with React and TypeScript.",
-      requirements: ["5+ years React", "TypeScript", "System Design"],
-      benefits: ["Health Insurance", "401k", "Remote Work"],
-      aiGenerated: true,
-    },
-    {
-      id: "2",
-      title: "Product Manager",
-      department: "Product",
-      location: "Remote",
-      type: "Full-time",
-      experience: "3-5 years",
-      salary: "$100k - $140k",
-      status: "published",
-      applicants: 28,
-      views: 189,
-      matchScore: 92,
-      postedDate: "2025-01-08",
-      closingDate: "2025-02-08",
-      description: "Join our product team to build innovative solutions that impact millions of users.",
-      requirements: ["Product Management", "Agile", "Analytics"],
-      benefits: ["Health Insurance", "Stock Options", "Flexible Hours"],
-      aiGenerated: false,
-    },
-    {
-      id: "3",
-      title: "UX Designer",
-      department: "Design",
-      location: "New York, NY",
-      type: "Full-time",
-      experience: "2-4 years",
-      salary: "$90k - $120k",
-      status: "draft",
-      applicants: 0,
-      views: 0,
-      matchScore: 85,
-      postedDate: "",
-      closingDate: "",
-      description: "We're seeking a talented UX Designer to create intuitive and engaging user experiences.",
-      requirements: ["Figma", "User Research", "Prototyping"],
-      benefits: ["Health Insurance", "Unlimited PTO", "Learning Budget"],
-      aiGenerated: true,
-    },
-    {
-      id: "4",
-      title: "Backend Engineer",
-      department: "Engineering",
-      location: "Austin, TX",
-      type: "Full-time",
-      experience: "3-6 years",
-      salary: "$110k - $145k",
-      status: "published",
-      applicants: 67,
-      views: 345,
-      matchScore: 90,
-      postedDate: "2025-01-03",
-      closingDate: "2025-02-03",
-      description: "Looking for a Backend Engineer to build scalable systems that power our platform.",
-      requirements: ["Node.js", "Python", "Microservices", "AWS"],
-      benefits: ["Health Insurance", "401k", "Relocation Assistance"],
-      aiGenerated: false,
-    },
-    {
-      id: "5",
-      title: "Data Scientist",
-      department: "Data",
-      location: "Boston, MA",
-      type: "Full-time",
-      experience: "4+ years",
-      salary: "$130k - $170k",
-      status: "paused",
-      applicants: 23,
-      views: 156,
-      matchScore: 88,
-      postedDate: "2024-12-20",
-      closingDate: "2025-01-20",
-      description: "Join our data team to drive insights and build ML models that improve our products.",
-      requirements: ["Machine Learning", "Python", "SQL", "Statistics"],
-      benefits: ["Health Insurance", "Stock Options", "Conference Budget"],
-      aiGenerated: true,
-    },
-    {
-      id: "6",
-      title: "DevOps Engineer",
-      department: "Engineering",
-      location: "Remote",
-      type: "Full-time",
-      experience: "4-7 years",
-      salary: "$125k - $155k",
-      status: "closed",
-      applicants: 89,
-      views: 423,
-      matchScore: 91,
-      postedDate: "2024-12-01",
-      closingDate: "2025-01-01",
-      description: "We need a DevOps Engineer to manage our infrastructure and deployment pipelines.",
-      requirements: ["Kubernetes", "Docker", "CI/CD", "AWS"],
-      benefits: ["Health Insurance", "401k", "Remote Work"],
-      aiGenerated: false,
-    },
-  ];
+  // Load jobs from Firestore
+  useEffect(() => {
+    loadJobs();
+  }, [userProfile?.companyId]);
+
+  const loadJobs = async () => {
+    if (!userProfile?.companyId) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const jobsRef = collection(db, "jobs");
+      const q = query(
+        jobsRef,
+        where("companyId", "==", userProfile.companyId),
+        orderBy("createdAt", "desc")
+      );
+
+      const snapshot = await getDocs(q);
+      const jobsData: Job[] = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      } as Job));
+
+      setJobs(jobsData);
+    } catch (error) {
+      console.error("Error loading jobs:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleViewJob = (job: Job) => {
+    setSelectedJob(job);
+    setDetailsOpen(true);
+  };
+
+  const handleDeleteJob = (job: Job) => {
+    setJobToDelete(job);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!jobToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      const { deleteDoc, doc } = await import("firebase/firestore");
+      await deleteDoc(doc(db, "jobs", jobToDelete.id));
+
+      toast({
+        title: "Job Deleted",
+        description: `${jobToDelete.title} has been deleted successfully.`,
+      });
+
+      // Reload jobs
+      await loadJobs();
+      setShowDeleteDialog(false);
+      setJobToDelete(null);
+    } catch (error) {
+      console.error("Error deleting job:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete job. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const stats = {
     total: jobs.length,
     published: jobs.filter(j => j.status === "published").length,
     draft: jobs.filter(j => j.status === "draft").length,
-    totalApplicants: jobs.reduce((sum, j) => sum + j.applicants, 0),
-    avgMatchScore: Math.round(jobs.reduce((sum, j) => sum + j.matchScore, 0) / jobs.length),
+    closed: jobs.filter(j => j.status === "closed").length,
+    totalApplicants: jobs.reduce((sum, j) => sum + (j.applicants || 0), 0),
   };
 
   const filteredJobs = jobs.filter(job => {
@@ -280,12 +253,10 @@ export default function RecruiterJobsPage() {
                   <Globe className="w-4 h-4 mr-2" />
                   View Career Page
                 </Button>
-                <a href="/recruiter/jobs/new">
-                  <Button>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Post New Job
-                  </Button>
-                </a>
+                <Button onClick={() => setCreateDialogOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Post New Job
+                </Button>
               </div>
             </div>
 
@@ -339,10 +310,10 @@ export default function RecruiterJobsPage() {
                 <CardContent className="pt-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Avg Match Score</p>
-                      <p className="text-2xl font-bold">{stats.avgMatchScore}%</p>
+                      <p className="text-sm text-muted-foreground">Closed</p>
+                      <p className="text-2xl font-bold">{stats.closed}</p>
                     </div>
-                    <TrendingUp className="w-8 h-8 text-orange-500" />
+                    <XCircle className="w-8 h-8 text-red-500" />
                   </div>
                 </CardContent>
               </Card>
@@ -395,36 +366,50 @@ export default function RecruiterJobsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Job Title</TableHead>
-                    <TableHead>Department</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Applicants</TableHead>
-                    <TableHead>Views</TableHead>
-                    <TableHead>Match Score</TableHead>
-                    <TableHead>Posted</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredJobs.map((job) => (
+              {loading ? (
+                <div className="text-center py-12">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  <p className="text-muted-foreground mt-4">Loading jobs...</p>
+                </div>
+              ) : filteredJobs.length === 0 ? (
+                <div className="text-center py-12">
+                  <Briefcase className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                  <h3 className="text-lg font-semibold mb-2">No jobs found</h3>
+                  <p className="text-muted-foreground mb-4">
+                    {jobs.length === 0 ? "Create your first job posting!" : "Try adjusting your filters"}
+                  </p>
+                  {jobs.length === 0 && (
+                    <Button onClick={() => setCreateDialogOpen(true)}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Post New Job
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Job Title</TableHead>
+                      <TableHead>Department</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Applicants</TableHead>
+                      <TableHead>Views</TableHead>
+                      <TableHead>Salary Range</TableHead>
+                      <TableHead>Posted</TableHead>
+                      <TableHead></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredJobs.map((job) => (
                     <TableRow key={job.id} className="cursor-pointer hover:bg-muted/50">
                       <TableCell>
                         <div>
                           <div className="flex items-center gap-2">
                             <p className="font-semibold">{job.title}</p>
-                            {job.aiGenerated && (
-                              <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-                                <Sparkles className="w-3 h-3 mr-1" />
-                                AI
-                              </Badge>
-                            )}
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            {job.type} • {job.experience}
+                            {job.type} • {job.experienceLevel}
                           </p>
                         </div>
                       </TableCell>
@@ -446,28 +431,26 @@ export default function RecruiterJobsPage() {
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Users className="w-4 h-4 text-muted-foreground" />
-                          <span className="font-medium">{job.applicants}</span>
+                          <span className="font-medium">{job.applicants || 0}</span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Eye className="w-4 h-4 text-muted-foreground" />
-                          <span>{job.views}</span>
+                          <span>{job.views || 0}</span>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={`${
-                          job.matchScore >= 90 ? "bg-green-50 text-green-700 border-green-200" :
-                          job.matchScore >= 80 ? "bg-blue-50 text-blue-700 border-blue-200" :
-                          "bg-gray-50 text-gray-700 border-gray-200"
-                        }`}>
-                          {job.matchScore}%
-                        </Badge>
+                        <div className="text-sm text-muted-foreground">
+                          {job.salaryMin && job.salaryMax
+                            ? `$${(job.salaryMin / 1000).toFixed(0)}k - $${(job.salaryMax / 1000).toFixed(0)}k`
+                            : "Not specified"}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <Clock className="w-3 h-3" />
-                          {job.postedDate || "Not posted"}
+                          {job.createdAt?.toDate ? new Date(job.createdAt.toDate()).toLocaleDateString() : "N/A"}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -482,7 +465,10 @@ export default function RecruiterJobsPage() {
                               <Eye className="w-4 h-4 mr-2" />
                               View Details
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setJobToEdit(job);
+                              setEditDialogOpen(true);
+                            }}>
                               <Edit className="w-4 h-4 mr-2" />
                               Edit Job
                             </DropdownMenuItem>
@@ -490,7 +476,13 @@ export default function RecruiterJobsPage() {
                               <Copy className="w-4 h-4 mr-2" />
                               Duplicate
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive">
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteJob(job);
+                              }}
+                            >
                               <Trash2 className="w-4 h-4 mr-2" />
                               Delete
                             </DropdownMenuItem>
@@ -498,9 +490,10 @@ export default function RecruiterJobsPage() {
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -512,12 +505,6 @@ export default function RecruiterJobsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {selectedJob?.title}
-              {selectedJob?.aiGenerated && (
-                <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-                  <Sparkles className="w-3 h-3 mr-1" />
-                  AI Generated
-                </Badge>
-              )}
             </DialogTitle>
             <DialogDescription>
               {selectedJob?.department} • {selectedJob?.location}
@@ -534,13 +521,17 @@ export default function RecruiterJobsPage() {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">Experience</p>
-                  <p>{selectedJob.experience}</p>
+                  <p>{selectedJob.experienceLevel}</p>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">Salary Range</p>
                   <div className="flex items-center gap-1">
                     <DollarSign className="w-4 h-4 text-muted-foreground" />
-                    <span>{selectedJob.salary}</span>
+                    <span>
+                      {selectedJob.salaryMin && selectedJob.salaryMax
+                        ? `$${(selectedJob.salaryMin / 1000).toFixed(0)}k - $${(selectedJob.salaryMax / 1000).toFixed(0)}k`
+                        : "Not specified"}
+                    </span>
                   </div>
                 </div>
                 <div>
@@ -583,24 +574,27 @@ export default function RecruiterJobsPage() {
               </div>
 
               {/* Stats */}
-              <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                 <div className="text-center">
-                  <p className="text-2xl font-bold">{selectedJob.applicants}</p>
+                  <p className="text-2xl font-bold">{selectedJob.applicants || 0}</p>
                   <p className="text-sm text-muted-foreground">Applicants</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold">{selectedJob.views}</p>
+                  <p className="text-2xl font-bold">{selectedJob.views || 0}</p>
                   <p className="text-sm text-muted-foreground">Views</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold">{selectedJob.matchScore}%</p>
-                  <p className="text-sm text-muted-foreground">Avg Match</p>
                 </div>
               </div>
 
               {/* Actions */}
               <div className="flex gap-3 pt-4 border-t">
-                <Button className="flex-1">
+                <Button
+                  className="flex-1"
+                  onClick={() => {
+                    setJobToEdit(selectedJob);
+                    setDetailsOpen(false);
+                    setEditDialogOpen(true);
+                  }}
+                >
                   <Edit className="w-4 h-4 mr-2" />
                   Edit Job
                 </Button>
@@ -617,6 +611,39 @@ export default function RecruiterJobsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Create Job Dialog */}
+      <CreateJobDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onSuccess={() => {
+          loadJobs(); // Reload jobs list from Firestore
+          setCreateDialogOpen(false);
+        }}
+      />
+
+      {/* Edit Job Dialog */}
+      <EditJobDialog
+        job={jobToEdit}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSuccess={() => {
+          loadJobs(); // Reload jobs list from Firestore
+          setEditDialogOpen(false);
+        }}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        onConfirm={confirmDelete}
+        title="Delete Job Posting"
+        description="Are you sure you want to delete this job posting? This will also delete all associated applications."
+        itemName={jobToDelete?.title}
+        loading={isDeleting}
+        destructiveAction="Delete Job"
+      />
     </div>
   );
 }

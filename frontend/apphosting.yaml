@@ -1,0 +1,128 @@
+# Firebase App Hosting Configuration
+# https://firebase.google.com/docs/app-hosting
+
+runConfig:
+  # Autoscaling configuration
+  minInstances: 0  # Scale to zero when no traffic
+  maxInstances: 10  # Maximum concurrent instances
+
+  # Resource allocation per instance
+  cpu: 1
+  memoryMiB: 512
+
+  # Concurrency (requests per instance)
+  concurrency: 80
+
+# Environment variables
+env:
+  # Public Firebase config (safe to expose)
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    value: AIzaSyAZz3obF6GWhFgUfHdjql2krif-rnmsY4I
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: persona-recruit-ai-1753870110.firebaseapp.com
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: persona-recruit-ai-1753870110
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: persona-recruit-ai-1753870110.firebasestorage.app
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: "934696740757"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: "1:934696740757:web:9a70441da45f47f7f8789c"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # NextAuth configuration
+  - variable: NEXTAUTH_URL
+    value: https://persona-recruit-ai-1753870110.web.app
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # Secrets from Google Cloud Secret Manager
+  # These will be automatically injected at runtime
+  - variable: NEXTAUTH_SECRET
+    secret: NEXTAUTH_SECRET
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: FIREBASE_SERVICE_ACCOUNT_KEY
+    secret: FIREBASE_SERVICE_ACCOUNT_KEY
+    availability:
+      - RUNTIME
+
+  - variable: GOOGLE_API_KEY
+    secret: GEMINI_API_KEY
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_GEMINI_API_KEY
+    secret: GEMINI_API_KEY
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: SENDGRID_API_KEY
+    secret: SENDGRID_API_KEY
+    availability:
+      - RUNTIME
+
+  - variable: RESEND_API_KEY
+    secret: RESEND_API_KEY
+    availability:
+      - RUNTIME
+
+  # Optional: Stripe integration
+  - variable: STRIPE_SECRET_KEY
+    secret: STRIPE_SECRET_KEY
+    availability:
+      - RUNTIME
+
+  - variable: STRIPE_WEBHOOK_SECRET
+    secret: STRIPE_WEBHOOK_SECRET
+    availability:
+      - RUNTIME
+
+  # Optional: Meeting bot webhooks
+  - variable: ZOOM_WEBHOOK_SECRET
+    secret: ZOOM_WEBHOOK_SECRET
+    availability:
+      - RUNTIME
+
+  - variable: TEAMS_WEBHOOK_SECRET
+    secret: TEAMS_WEBHOOK_SECRET
+    availability:
+      - RUNTIME
+
+  - variable: MEET_WEBHOOK_SECRET
+    secret: MEET_WEBHOOK_SECRET
+    availability:
+      - RUNTIME
+
+# Build configuration
+buildConfig:
+  runtime: nodejs20
+  buildCommand: npm run build
+  installCommand: npm ci

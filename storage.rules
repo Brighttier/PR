@@ -1,0 +1,76 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper function: Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function: Check if user is the owner
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // Helper function: Check if user has role
+    function hasRole(role) {
+      return request.auth.token.role == role;
+    }
+
+    // Helper function: Check if user belongs to company
+    function belongsToCompany(companyId) {
+      return request.auth.token.companyId == companyId;
+    }
+
+    // Resumes uploaded by candidates
+    match /resumes/{companyId}/{candidateId}/{fileName} {
+      // Candidates can upload their own resumes
+      allow write: if isAuthenticated() && isOwner(candidateId);
+
+      // Candidates can read their own resumes
+      allow read: if isAuthenticated() && isOwner(candidateId);
+
+      // Recruiters, HR Admins, and Interviewers can read resumes from their company
+      allow read: if isAuthenticated() &&
+                     belongsToCompany(companyId) &&
+                     (hasRole('recruiter') || hasRole('hr_admin') || hasRole('interviewer'));
+    }
+
+    // Interview recordings (video/audio)
+    match /interviews/{interviewId}/{fileName} {
+      // Candidates can upload their own interview recordings
+      allow write: if isAuthenticated();
+
+      // Candidates can read their own interview recordings
+      // Recruiters, HR Admins, and Interviewers can read recordings
+      allow read: if isAuthenticated() &&
+                     (hasRole('candidate') || hasRole('recruiter') || hasRole('hr_admin') || hasRole('interviewer'));
+    }
+
+    // Company logos
+    match /companies/{companyId}/logo {
+      // HR Admins can upload/update company logo
+      allow write: if isAuthenticated() &&
+                      belongsToCompany(companyId) &&
+                      hasRole('hr_admin');
+
+      // Anyone can read company logos (public)
+      allow read: if true;
+    }
+
+    // Candidate profile photos
+    match /profile-photos/{userId}/{fileName} {
+      // Users can upload their own profile photos
+      allow write: if isAuthenticated() && isOwner(userId);
+
+      // Anyone authenticated can read profile photos
+      allow read: if isAuthenticated();
+    }
+
+    // Default: Deny all access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

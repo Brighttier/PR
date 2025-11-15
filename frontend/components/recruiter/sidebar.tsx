@@ -1,8 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import {
-  Building2,
   BarChart3,
   Briefcase,
   FileText,
@@ -11,17 +9,24 @@ import {
   Calendar,
   Settings,
 } from "lucide-react";
+import BaseSidebar, { NavItem } from "@/components/layout/base-sidebar";
 
-interface NavLink {
-  href: string;
-  label: string;
-  icon: any;
+interface RecruiterSidebarProps {
+  user: {
+    name: string;
+    email: string;
+    avatar?: string;
+  };
+  companyName?: string;
+  onLogout?: () => void;
 }
 
-export function RecruiterSidebar() {
-  const pathname = usePathname();
-
-  const navLinks: NavLink[] = [
+export default function RecruiterSidebar({
+  user,
+  companyName,
+  onLogout,
+}: RecruiterSidebarProps) {
+  const navItems: NavItem[] = [
     {
       href: "/recruiter/dashboard",
       label: "Dashboard",
@@ -59,48 +64,13 @@ export function RecruiterSidebar() {
     },
   ];
 
-  const isActive = (href: string) => {
-    if (href === "/recruiter/dashboard") {
-      return pathname === href;
-    }
-    return pathname.startsWith(href);
-  };
-
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <Building2 className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h2 className="font-semibold text-sm">Recruiter Portal</h2>
-            <p className="text-xs text-muted-foreground">TechCorp Inc.</p>
-          </div>
-        </div>
-      </div>
-
-      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-        {navLinks.map((link) => {
-          const Icon = link.icon;
-          const active = isActive(link.href);
-
-          return (
-            <a
-              key={link.href}
-              href={link.href}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                active
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              <Icon className="w-5 h-5 flex-shrink-0" />
-              <span className="font-medium">{link.label}</span>
-            </a>
-          );
-        })}
-      </nav>
-    </aside>
+    <BaseSidebar
+      companyName={companyName || "TechCorp Inc."}
+      portalName="Recruiter Portal"
+      navItems={navItems}
+      user={user}
+      onLogout={onLogout}
+    />
   );
 }

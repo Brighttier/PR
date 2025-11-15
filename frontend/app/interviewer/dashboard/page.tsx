@@ -123,83 +123,18 @@ export default function InterviewerDashboard() {
   ];
 
   return (
-    <div className="flex h-screen bg-background">
-      {/* Sidebar */}
-      <aside className="w-64 border-r bg-card flex flex-col">
-        {/* Logo */}
-        <div className="p-6 border-b">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <Video className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="font-bold text-lg">Persona Recruit</h1>
-              <p className="text-xs text-muted-foreground">Interviewer Portal</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1">
-          <a href="/interviewer/dashboard" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-primary text-primary-foreground">
-            <FileText className="w-5 h-5" />
-            <span className="font-medium">Dashboard</span>
-          </a>
-          <a href="/interviewer/interviews" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-muted">
-            <Calendar className="w-5 h-5" />
-            <span className="font-medium">My Interviews</span>
-          </a>
-          <a href="/interviewer/feedback" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-muted">
-            <MessageSquare className="w-5 h-5" />
-            <span className="font-medium">Feedback</span>
-            <Badge variant="destructive" className="ml-auto">
-              {pendingFeedback.length}
-            </Badge>
-          </a>
-          <a href="/interviewer/candidates" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-muted">
-            <Users className="w-5 h-5" />
-            <span className="font-medium">Candidates</span>
-          </a>
-          <a href="/interviewer/calendar" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-muted">
-            <Calendar className="w-5 h-5" />
-            <span className="font-medium">Calendar</span>
-          </a>
-          <a href="/interviewer/settings" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-muted">
-            <Settings className="w-5 h-5" />
-            <span className="font-medium">Settings</span>
-          </a>
-        </nav>
-
-        {/* User Profile */}
-        <div className="p-4 border-t">
-          <div className="flex items-center gap-3">
-            <Avatar className="w-10 h-10 bg-primary text-primary-foreground flex items-center justify-center font-semibold">
-              MI
-            </Avatar>
-            <div className="flex-1">
-              <p className="font-medium text-sm">Mike Interviewer</p>
-              <p className="text-xs text-muted-foreground">interviewer@example.com</p>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+    <div className="p-6">
+      <div className="space-y-6">
         {/* Header */}
-        <header className="border-b bg-card sticky top-0 z-10">
-          <div className="flex items-center justify-between p-6">
-            <div>
-              <h2 className="text-2xl font-bold">Interviewer Dashboard</h2>
-              <p className="text-muted-foreground">
-                Manage your interview schedule and provide feedback
-              </p>
-            </div>
-          </div>
-        </header>
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Interviewer Dashboard</h2>
+          <p className="text-muted-foreground mt-1">
+            Manage your interview schedule and provide feedback
+          </p>
+        </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="space-y-6">
           {/* Stats Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {stats.map((stat) => (
@@ -377,7 +312,8 @@ export default function InterviewerDashboard() {
             </CardContent>
           </Card>
         </div>
-      </main>
+      </div>
+    </div>
     </div>
   );
 }

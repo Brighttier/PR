@@ -1,0 +1,304 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function hasRole(role) {
+      return request.auth.token.role == role;
+    }
+
+    function hasAnyRole(roles) {
+      return request.auth.token.role in roles;
+    }
+
+    function belongsToCompany(companyId) {
+      return request.auth.token.companyId == companyId;
+    }
+
+    function isPlatformAdmin() {
+      return hasRole('platform_admin');
+    }
+
+    function isHRAdmin() {
+      return hasRole('hr_admin');
+    }
+
+    function isRecruiter() {
+      return hasRole('recruiter');
+    }
+
+    function isInterviewer() {
+      return hasRole('interviewer');
+    }
+
+    function isCandidate() {
+      return hasRole('candidate');
+    }
+
+    // Users collection
+    match /users/{userId} {
+      // Users can read their own profile
+      allow read: if isAuthenticated() && isOwner(userId);
+
+      // Users can update their own profile (limited fields)
+      allow update: if isAuthenticated() && isOwner(userId);
+
+      // Platform admins can read all users
+      allow read: if isPlatformAdmin();
+
+      // HR admins and recruiters can read users from their company
+      allow read: if isAuthenticated() &&
+                     belongsToCompany(resource.data.companyId) &&
+                     hasAnyRole(['hr_admin', 'recruiter', 'interviewer']);
+
+      // HR admins can create/update/delete users in their company
+      allow create, update, delete: if isAuthenticated() &&
+                                       isHRAdmin() &&
+                                       belongsToCompany(request.resource.data.companyId);
+
+      // Platform admins have full access
+      allow write: if isPlatformAdmin();
+    }
+
+    // Companies collection
+    match /companies/{companyId} {
+      // Anyone can read company info (for public career pages)
+      allow read: if true;
+
+      // HR admins can update their own company
+      allow update: if isAuthenticated() &&
+                       belongsToCompany(companyId) &&
+                       isHRAdmin();
+
+      // Platform admins have full access
+      allow read, write: if isPlatformAdmin();
+    }
+
+    // Jobs collection
+    match /jobs/{jobId} {
+      // Anyone can read open jobs (for public career pages)
+      allow read: if resource.data.status == 'Open';
+
+      // Recruiters and HR admins can read all jobs from their company
+      allow read: if isAuthenticated() &&
+                     belongsToCompany(resource.data.companyId) &&
+                     hasAnyRole(['recruiter', 'hr_admin']);
+
+      // Interviewers can read jobs for their assigned interviews
+      allow read: if isAuthenticated() && isInterviewer();
+
+      // Recruiters and HR admins can create/update/delete jobs
+      allow create, update, delete: if isAuthenticated() &&
+                                       belongsToCompany(request.resource.data.companyId) &&
+                                       hasAnyRole(['recruiter', 'hr_admin']);
+
+      // Platform admins have full access
+      allow read, write: if isPlatformAdmin();
+    }
+
+    // Applications collection
+    match /applications/{applicationId} {
+      // Candidates can read their own applications
+      allow read: if isAuthenticated() &&
+                     isCandidate() &&
+                     isOwner(resource.data.candidateId);
+
+      // Candidates can create applications
+      allow create: if isAuthenticated() &&
+                       isCandidate() &&
+                       isOwner(request.resource.data.candidateId);
+
+      // Candidates can update their own applications (limited fields like status: withdrawn)
+      allow update: if isAuthenticated() &&
+                       isCandidate() &&
+                       isOwner(resource.data.candidateId) &&
+                       request.resource.data.status == 'Withdrawn';
+
+      // Recruiters and HR admins can read all applications from their company
+      allow read: if isAuthenticated() &&
+                     belongsToCompany(resource.data.companyId) &&
+                     hasAnyRole(['recruiter', 'hr_admin']);
+
+      // Interviewers can read applications they are assigned to
+      allow read: if isAuthenticated() &&
+                     isInterviewer() &&
+                     request.auth.uid in resource.data.assignedInterviewers;
+
+      // Recruiters and HR admins can update applications
+      allow update: if isAuthenticated() &&
+                       belongsToCompany(resource.data.companyId) &&
+                       hasAnyRole(['recruiter', 'hr_admin']);
+
+      // Platform admins have read access
+      allow read: if isPlatformAdmin();
+
+      // Feedback sub-collection
+      match /feedback/{feedbackId} {
+        // Interviewers can create feedback for their interviews
+        allow create: if isAuthenticated() &&
+                         isInterviewer() &&
+                         isOwner(request.resource.data.interviewerId);
+
+        // Interviewers can read/update their own feedback
+        allow read, update: if isAuthenticated() &&
+                              isInterviewer() &&
+                              isOwner(resource.data.interviewerId);
+
+        // Recruiters and HR admins can read all feedback
+        allow read: if isAuthenticated() &&
+                       hasAnyRole(['recruiter', 'hr_admin']);
+      }
+    }
+
+    // Interviews collection
+    match /interviews/{interviewId} {
+      // Candidates can read their own interviews
+      allow read: if isAuthenticated() &&
+                     isCandidate() &&
+                     isOwner(resource.data.candidateId);
+
+      // Assigned interviewers can read their interviews
+      allow read: if isAuthenticated() &&
+                     isInterviewer() &&
+                     request.auth.uid in resource.data.assignedInterviewers;
+
+      // Recruiters and HR admins can read all interviews from their company
+      allow read: if isAuthenticated() &&
+                     belongsToCompany(resource.data.companyId) &&
+                     hasAnyRole(['recruiter', 'hr_admin']);
+
+      // Recruiters and HR admins can create/update interviews
+      allow create, update: if isAuthenticated() &&
+                               belongsToCompany(request.resource.data.companyId) &&
+                               hasAnyRole(['recruiter', 'hr_admin']);
+
+      // Candidates can update interview status (for joining AI interviews)
+      allow update: if isAuthenticated() &&
+                       isCandidate() &&
+                       isOwner(resource.data.candidateId) &&
+                       request.resource.data.status in ['in_progress', 'completed'];
+
+      // Platform admins have read access
+      allow read: if isPlatformAdmin();
+    }
+
+    // Templates collection
+    match /templates/{templateId} {
+      // Recruiters and HR admins can read templates from their company
+      allow read: if isAuthenticated() &&
+                     belongsToCompany(resource.data.companyId) &&
+                     hasAnyRole(['recruiter', 'hr_admin']);
+
+      // Recruiters and HR admins can create/update/delete templates
+      allow create, update, delete: if isAuthenticated() &&
+                                       belongsToCompany(request.resource.data.companyId) &&
+                                       hasAnyRole(['recruiter', 'hr_admin']);
+    }
+
+    // Invites collection
+    match /invites/{inviteId} {
+      // HR admins can create invites for their company
+      allow create: if isAuthenticated() &&
+                       isHRAdmin() &&
+                       belongsToCompany(request.resource.data.companyId);
+
+      // HR admins can read invites from their company
+      allow read: if isAuthenticated() &&
+                     isHRAdmin() &&
+                     belongsToCompany(resource.data.companyId);
+
+      // Anyone can read an invite by token (for acceptance)
+      allow read: if true;
+
+      // System can update invites (via Cloud Functions)
+      allow update: if true;
+
+      // HR admins can delete invites
+      allow delete: if isAuthenticated() &&
+                       isHRAdmin() &&
+                       belongsToCompany(resource.data.companyId);
+    }
+
+    // Talent pool collection
+    match /talentPool/{candidateId} {
+      // Recruiters and HR admins can read talent pool from their company
+      allow read: if isAuthenticated() &&
+                     belongsToCompany(resource.data.companyId) &&
+                     hasAnyRole(['recruiter', 'hr_admin']);
+
+      // Recruiters and HR admins can add/update candidates to talent pool
+      allow create, update: if isAuthenticated() &&
+                               belongsToCompany(request.resource.data.companyId) &&
+                               hasAnyRole(['recruiter', 'hr_admin']);
+    }
+
+    // Folders collection (personal folders)
+    match /folders/{folderId} {
+      // Users can read their own folders
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+
+      // Users can create/update/delete their own folders
+      allow create, update, delete: if isAuthenticated() &&
+                                       isOwner(request.resource.data.userId);
+    }
+
+    // AI agent settings
+    match /aiAgentSettings/{companyId} {
+      // HR admins can read/update settings for their company
+      allow read, update: if isAuthenticated() &&
+                             isHRAdmin() &&
+                             belongsToCompany(companyId);
+    }
+
+    // Pipeline settings
+    match /pipelineSettings/{companyId} {
+      // HR admins can read/update settings for their company
+      allow read, update: if isAuthenticated() &&
+                             isHRAdmin() &&
+                             belongsToCompany(companyId);
+    }
+
+    // Platform configuration (platform admin only)
+    match /platformConfig/{configId} {
+      allow read, write: if isPlatformAdmin();
+    }
+
+    // Bug reports
+    match /bugReports/{reportId} {
+      // Anyone authenticated can create bug reports
+      allow create: if isAuthenticated();
+
+      // Platform admins can read all bug reports
+      allow read: if isPlatformAdmin();
+
+      // Platform admins can update bug reports (for status tracking)
+      allow update: if isPlatformAdmin();
+    }
+
+    // Notifications
+    match /notifications/{notificationId} {
+      // Users can read their own notifications
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+
+      // Users can update their own notifications (mark as read)
+      allow update: if isAuthenticated() && isOwner(resource.data.userId);
+
+      // System can create notifications
+      allow create: if true;
+    }
+
+    // Default: Deny all access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,6 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/contexts/AuthContext";
 import { RecruiterSidebar } from "@/components/recruiter/sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,43 +70,45 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 
 type ApplicationStatus =
-  | "applied"
-  | "screening"
-  | "interview"
-  | "offer"
-  | "hired"
-  | "rejected"
-  | "withdrawn";
+  | "Applied"
+  | "Under Review"
+  | "Screening Scheduled"
+  | "Technical Interview Scheduled"
+  | "Interview Scheduled"
+  | "Offer Extended"
+  | "Hired"
+  | "Rejected"
+  | "Withdrawn";
 
 interface Application {
-  id: number;
+  id: string;
+  candidateId: string;
   candidateName: string;
   candidateEmail: string;
-  candidateAvatar: string;
-  candidatePhone: string;
+  candidatePhone?: string;
+  jobId: string;
   jobTitle: string;
-  jobDepartment: string;
-  appliedDate: string;
+  companyId: string;
+  appliedAt: any;
   status: ApplicationStatus;
   stage: string;
-  matchScore: number;
-  aiRecommendation: string;
-  resumeUrl: string;
+  resumeUrl?: string;
   coverLetter?: string;
-  experience: string;
-  location: string;
-  expectedSalary?: string;
-  noticePeriod?: string;
-  skills: string[];
-  education: string;
-  aiSummary: string;
-  strengths: string[];
-  concerns: string[];
-  interviewsScheduled: number;
-  lastUpdated: string;
+  aiAnalysis?: {
+    matchScore: number;
+    recommendation: string;
+    oneLiner?: string;
+    executiveSummary?: string;
+    strengths: string[];
+    redFlags?: string[];
+  };
+  createdAt?: any;
+  updatedAt?: any;
 }
 
 export default function RecruiterApplicationsPage() {
+  const router = useRouter();
+  const { userProfile } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [jobFilter, setJobFilter] = useState("all");
@@ -112,291 +118,64 @@ export default function RecruiterApplicationsPage() {
   const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [emailSubject, setEmailSubject] = useState("");
   const [emailBody, setEmailBody] = useState("");
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [jobs, setJobs] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock applications data
-  const applications: Application[] = [
-    {
-      id: 1,
-      candidateName: "Sarah Johnson",
-      candidateEmail: "sarah.johnson@email.com",
-      candidateAvatar: "",
-      candidatePhone: "+1 (555) 123-4567",
-      jobTitle: "Senior Software Engineer",
-      jobDepartment: "Engineering",
-      appliedDate: "Jan 15, 2024",
-      status: "interview",
-      stage: "Technical Interview",
-      matchScore: 94,
-      aiRecommendation: "Strong Hire",
-      resumeUrl: "/resumes/sarah-johnson.pdf",
-      coverLetter: "I am excited to apply for the Senior Software Engineer position...",
-      experience: "8 years",
-      location: "San Francisco, CA",
-      expectedSalary: "$150,000 - $180,000",
-      noticePeriod: "2 weeks",
-      skills: ["React", "TypeScript", "Node.js", "AWS", "Docker", "GraphQL"],
-      education: "BS Computer Science - Stanford University",
-      aiSummary: "Highly experienced full-stack engineer with strong technical skills and leadership experience. Excellent cultural fit with proven track record of delivering complex projects.",
-      strengths: [
-        "8+ years of experience with modern tech stack",
-        "Led multiple high-impact projects",
-        "Strong communication skills",
-        "Active open-source contributor",
-      ],
-      concerns: [
-        "Salary expectation at upper range",
-        "May need relocation assistance",
-      ],
-      interviewsScheduled: 2,
-      lastUpdated: "2 hours ago",
-    },
-    {
-      id: 2,
-      candidateName: "Michael Chen",
-      candidateEmail: "michael.chen@email.com",
-      candidateAvatar: "",
-      candidatePhone: "+1 (555) 234-5678",
-      jobTitle: "Product Manager",
-      jobDepartment: "Product",
-      appliedDate: "Jan 14, 2024",
-      status: "screening",
-      stage: "Initial Screening",
-      matchScore: 88,
-      aiRecommendation: "Hire",
-      resumeUrl: "/resumes/michael-chen.pdf",
-      experience: "6 years",
-      location: "New York, NY",
-      expectedSalary: "$130,000 - $150,000",
-      noticePeriod: "1 month",
-      skills: ["Product Strategy", "Agile", "User Research", "Data Analysis", "SQL"],
-      education: "MBA - Harvard Business School",
-      aiSummary: "Strong product leader with excellent analytical skills and proven track record of launching successful products. Good cultural fit.",
-      strengths: [
-        "6 years PM experience at top companies",
-        "Strong analytical and data-driven approach",
-        "Excellent stakeholder management",
-      ],
-      concerns: [
-        "Limited experience with B2B products",
-      ],
-      interviewsScheduled: 1,
-      lastUpdated: "5 hours ago",
-    },
-    {
-      id: 3,
-      candidateName: "Emily Rodriguez",
-      candidateEmail: "emily.rodriguez@email.com",
-      candidateAvatar: "",
-      candidatePhone: "+1 (555) 345-6789",
-      jobTitle: "UX Designer",
-      jobDepartment: "Design",
-      appliedDate: "Jan 13, 2024",
-      status: "offer",
-      stage: "Offer Extended",
-      matchScore: 92,
-      aiRecommendation: "Strong Hire",
-      resumeUrl: "/resumes/emily-rodriguez.pdf",
-      experience: "5 years",
-      location: "Austin, TX",
-      expectedSalary: "$110,000 - $130,000",
-      noticePeriod: "2 weeks",
-      skills: ["Figma", "User Research", "Prototyping", "Design Systems", "Accessibility"],
-      education: "BFA Design - Rhode Island School of Design",
-      aiSummary: "Talented UX designer with strong portfolio and excellent design thinking skills. Very strong cultural fit with collaborative mindset.",
-      strengths: [
-        "Outstanding portfolio with award-winning work",
-        "Strong user research skills",
-        "Experience with design systems",
-        "Excellent collaboration skills",
-      ],
-      concerns: [],
-      interviewsScheduled: 3,
-      lastUpdated: "1 day ago",
-    },
-    {
-      id: 4,
-      candidateName: "David Kim",
-      candidateEmail: "david.kim@email.com",
-      candidateAvatar: "",
-      candidatePhone: "+1 (555) 456-7890",
-      jobTitle: "Data Scientist",
-      jobDepartment: "Analytics",
-      appliedDate: "Jan 12, 2024",
-      status: "hired",
-      stage: "Onboarding",
-      matchScore: 89,
-      aiRecommendation: "Hire",
-      resumeUrl: "/resumes/david-kim.pdf",
-      experience: "7 years",
-      location: "Seattle, WA",
-      expectedSalary: "$140,000 - $160,000",
-      noticePeriod: "3 weeks",
-      skills: ["Python", "Machine Learning", "TensorFlow", "SQL", "R", "Data Visualization"],
-      education: "PhD Statistics - MIT",
-      aiSummary: "Exceptional data scientist with PhD and strong research background. Published researcher with deep learning expertise.",
-      strengths: [
-        "PhD from top institution",
-        "Published research in ML",
-        "Strong technical skills",
-        "Industry experience",
-      ],
-      concerns: [],
-      interviewsScheduled: 2,
-      lastUpdated: "3 days ago",
-    },
-    {
-      id: 5,
-      candidateName: "Jessica Taylor",
-      candidateEmail: "jessica.taylor@email.com",
-      candidateAvatar: "",
-      candidatePhone: "+1 (555) 567-8901",
-      jobTitle: "Marketing Manager",
-      jobDepartment: "Marketing",
-      appliedDate: "Jan 11, 2024",
-      status: "applied",
-      stage: "Application Review",
-      matchScore: 79,
-      aiRecommendation: "Consider",
-      resumeUrl: "/resumes/jessica-taylor.pdf",
-      experience: "4 years",
-      location: "Los Angeles, CA",
-      expectedSalary: "$90,000 - $110,000",
-      noticePeriod: "2 weeks",
-      skills: ["Digital Marketing", "SEO", "Content Strategy", "Analytics", "Social Media"],
-      education: "BA Marketing - UCLA",
-      aiSummary: "Solid marketing professional with good digital marketing skills. May need more senior-level experience for this role.",
-      strengths: [
-        "Strong digital marketing skills",
-        "Good analytical mindset",
-        "Creative content strategy",
-      ],
-      concerns: [
-        "Limited experience with B2B marketing",
-        "Role may require more senior experience",
-      ],
-      interviewsScheduled: 0,
-      lastUpdated: "1 day ago",
-    },
-    {
-      id: 6,
-      candidateName: "Robert Anderson",
-      candidateEmail: "robert.anderson@email.com",
-      candidateAvatar: "",
-      candidatePhone: "+1 (555) 678-9012",
-      jobTitle: "DevOps Engineer",
-      jobDepartment: "Engineering",
-      appliedDate: "Jan 10, 2024",
-      status: "screening",
-      stage: "Technical Screening",
-      matchScore: 91,
-      aiRecommendation: "Strong Hire",
-      resumeUrl: "/resumes/robert-anderson.pdf",
-      experience: "9 years",
-      location: "Remote",
-      expectedSalary: "$140,000 - $165,000",
-      noticePeriod: "1 month",
-      skills: ["Kubernetes", "AWS", "Terraform", "CI/CD", "Python", "Monitoring"],
-      education: "BS Information Technology - Georgia Tech",
-      aiSummary: "Expert DevOps engineer with extensive cloud infrastructure experience. Strong automation skills and proven track record.",
-      strengths: [
-        "9+ years DevOps experience",
-        "Deep Kubernetes expertise",
-        "Strong automation mindset",
-        "Remote work experience",
-      ],
-      concerns: [
-        "Notice period is 1 month",
-      ],
-      interviewsScheduled: 1,
-      lastUpdated: "3 hours ago",
-    },
-    {
-      id: 7,
-      candidateName: "Amanda White",
-      candidateEmail: "amanda.white@email.com",
-      candidateAvatar: "",
-      candidatePhone: "+1 (555) 789-0123",
-      jobTitle: "Sales Director",
-      jobDepartment: "Sales",
-      appliedDate: "Jan 9, 2024",
-      status: "rejected",
-      stage: "Application Review",
-      matchScore: 68,
-      aiRecommendation: "Not Recommended",
-      resumeUrl: "/resumes/amanda-white.pdf",
-      experience: "10 years",
-      location: "Chicago, IL",
-      expectedSalary: "$150,000 - $200,000",
-      skills: ["Enterprise Sales", "Negotiation", "CRM", "Team Leadership", "Strategy"],
-      education: "BA Business Administration - Northwestern",
-      aiSummary: "Experienced sales professional but skill set doesn't align well with our technical product sales requirements.",
-      strengths: [
-        "10+ years sales experience",
-        "Strong enterprise sales background",
-      ],
-      concerns: [
-        "Limited technical product experience",
-        "Salary expectations significantly above budget",
-        "Background focused on different industry",
-      ],
-      interviewsScheduled: 0,
-      lastUpdated: "2 days ago",
-    },
-    {
-      id: 8,
-      candidateName: "Chris Martinez",
-      candidateEmail: "chris.martinez@email.com",
-      candidateAvatar: "",
-      candidatePhone: "+1 (555) 890-1234",
-      jobTitle: "Full Stack Developer",
-      jobDepartment: "Engineering",
-      appliedDate: "Jan 8, 2024",
-      status: "applied",
-      stage: "Application Review",
-      matchScore: 82,
-      aiRecommendation: "Consider",
-      resumeUrl: "/resumes/chris-martinez.pdf",
-      experience: "3 years",
-      location: "Miami, FL",
-      expectedSalary: "$90,000 - $110,000",
-      noticePeriod: "2 weeks",
-      skills: ["JavaScript", "React", "Node.js", "MongoDB", "Express", "Git"],
-      education: "BS Computer Science - University of Florida",
-      aiSummary: "Promising junior developer with solid foundation. Good cultural fit but may need mentorship for senior-level responsibilities.",
-      strengths: [
-        "Strong fundamentals in modern web stack",
-        "Eager to learn and grow",
-        "Good problem-solving skills",
-      ],
-      concerns: [
-        "Limited experience for mid-level role",
-        "May need additional training",
-      ],
-      interviewsScheduled: 0,
-      lastUpdated: "4 hours ago",
-    },
-  ];
+  // Load applications from Firestore
+  useEffect(() => {
+    loadApplications();
+  }, [userProfile?.companyId]);
 
-  const jobs = [
-    "Senior Software Engineer",
-    "Product Manager",
-    "UX Designer",
-    "Data Scientist",
-    "Marketing Manager",
-    "DevOps Engineer",
-    "Sales Director",
-    "Full Stack Developer",
-  ];
+  const loadApplications = async () => {
+    if (!userProfile?.companyId) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const applicationsRef = collection(db, "applications");
+      const q = query(
+        applicationsRef,
+        where("companyId", "==", userProfile.companyId),
+        orderBy("appliedAt", "desc")
+      );
+
+      const snapshot = await getDocs(q);
+      const applicationsData: Application[] = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      } as Application));
+
+      setApplications(applicationsData);
+
+      // Extract unique job titles for filter
+      const uniqueJobs = Array.from(new Set(applicationsData.map(app => app.jobTitle)));
+      setJobs(uniqueJobs);
+    } catch (error) {
+      console.error("Error loading applications:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   const stats = {
     total: applications.length,
-    pending: applications.filter((a) => a.status === "applied" || a.status === "screening").length,
-    interview: applications.filter((a) => a.status === "interview").length,
-    offer: applications.filter((a) => a.status === "offer").length,
-    hired: applications.filter((a) => a.status === "hired").length,
-    avgMatchScore: Math.round(
-      applications.reduce((acc, a) => acc + a.matchScore, 0) / applications.length
-    ),
+    pending: applications.filter((a) => a.status === "Applied" || a.status === "Under Review").length,
+    interview: applications.filter((a) =>
+      a.status === "Interview Scheduled" ||
+      a.status === "Screening Scheduled" ||
+      a.status === "Technical Interview Scheduled"
+    ).length,
+    offer: applications.filter((a) => a.status === "Offer Extended").length,
+    hired: applications.filter((a) => a.status === "Hired").length,
+    avgMatchScore: applications.length > 0
+      ? Math.round(
+          applications.reduce((acc, a) => acc + (a.aiAnalysis?.matchScore || 0), 0) / applications.length
+        )
+      : 0,
   };
 
   const filteredApplications = applications.filter((application) => {
@@ -411,18 +190,19 @@ export default function RecruiterApplicationsPage() {
     const matchesJob =
       jobFilter === "all" || application.jobTitle === jobFilter;
 
+    const matchScore = application.aiAnalysis?.matchScore || 0;
     const matchesMatchScore =
       matchScoreFilter === "all" ||
-      (matchScoreFilter === "high" && application.matchScore >= 85) ||
-      (matchScoreFilter === "medium" && application.matchScore >= 70 && application.matchScore < 85) ||
-      (matchScoreFilter === "low" && application.matchScore < 70);
+      (matchScoreFilter === "high" && matchScore >= 85) ||
+      (matchScoreFilter === "medium" && matchScore >= 70 && matchScore < 85) ||
+      (matchScoreFilter === "low" && matchScore < 70);
 
     return matchesSearch && matchesStatus && matchesJob && matchesMatchScore;
   });
 
   const handleViewApplication = (application: Application) => {
-    setSelectedApplication(application);
-    setShowApplicationDialog(true);
+    // Navigate to dedicated application details page
+    router.push(`/recruiter/applications/${application.id}`);
   };
 
   const handleSendEmail = (application: Application) => {
@@ -433,16 +213,18 @@ export default function RecruiterApplicationsPage() {
   };
 
   const getStatusBadge = (status: ApplicationStatus) => {
-    const styles = {
-      applied: "bg-blue-50 text-blue-700 border-blue-200",
-      screening: "bg-yellow-50 text-yellow-700 border-yellow-200",
-      interview: "bg-purple-50 text-purple-700 border-purple-200",
-      offer: "bg-orange-50 text-orange-700 border-orange-200",
-      hired: "bg-green-50 text-green-700 border-green-200",
-      rejected: "bg-red-50 text-red-700 border-red-200",
-      withdrawn: "bg-gray-50 text-gray-700 border-gray-200",
+    const styles: Record<string, string> = {
+      "Applied": "bg-blue-50 text-blue-700 border-blue-200",
+      "Under Review": "bg-yellow-50 text-yellow-700 border-yellow-200",
+      "Screening Scheduled": "bg-purple-50 text-purple-700 border-purple-200",
+      "Technical Interview Scheduled": "bg-purple-50 text-purple-700 border-purple-200",
+      "Interview Scheduled": "bg-purple-50 text-purple-700 border-purple-200",
+      "Offer Extended": "bg-orange-50 text-orange-700 border-orange-200",
+      "Hired": "bg-green-50 text-green-700 border-green-200",
+      "Rejected": "bg-red-50 text-red-700 border-red-200",
+      "Withdrawn": "bg-gray-50 text-gray-700 border-gray-200",
     };
-    return styles[status];
+    return styles[status] || "bg-gray-50 text-gray-700 border-gray-200";
   };
 
   const getRecommendationBadge = (recommendation: string) => {
@@ -561,17 +343,18 @@ export default function RecruiterApplicationsPage() {
                 />
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-[220px]">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="applied">Applied</SelectItem>
-                  <SelectItem value="screening">Screening</SelectItem>
-                  <SelectItem value="interview">Interview</SelectItem>
-                  <SelectItem value="offer">Offer</SelectItem>
-                  <SelectItem value="hired">Hired</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="Applied">Applied</SelectItem>
+                  <SelectItem value="Under Review">Under Review</SelectItem>
+                  <SelectItem value="Screening Scheduled">Screening Scheduled</SelectItem>
+                  <SelectItem value="Interview Scheduled">Interview Scheduled</SelectItem>
+                  <SelectItem value="Offer Extended">Offer Extended</SelectItem>
+                  <SelectItem value="Hired">Hired</SelectItem>
+                  <SelectItem value="Rejected">Rejected</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={jobFilter} onValueChange={setJobFilter}>
@@ -604,21 +387,37 @@ export default function RecruiterApplicationsPage() {
           {/* Applications Table */}
           <Card>
             <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Candidate</TableHead>
-                    <TableHead>Job</TableHead>
-                    <TableHead>Applied</TableHead>
-                    <TableHead>Match Score</TableHead>
-                    <TableHead>AI Recommendation</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Stage</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredApplications.map((application) => (
+              {loading ? (
+                <div className="text-center py-12">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  <p className="text-muted-foreground mt-4">Loading applications...</p>
+                </div>
+              ) : filteredApplications.length === 0 ? (
+                <div className="text-center py-12">
+                  <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                  <h3 className="text-lg font-semibold mb-2">No applications found</h3>
+                  <p className="text-muted-foreground mb-4">
+                    {applications.length === 0
+                      ? "No applications submitted yet"
+                      : "Try adjusting your search or filters"}
+                  </p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Candidate</TableHead>
+                      <TableHead>Job</TableHead>
+                      <TableHead>Applied</TableHead>
+                      <TableHead>Match Score</TableHead>
+                      <TableHead>AI Recommendation</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Stage</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredApplications.map((application) => (
                     <TableRow
                       key={application.id}
                       className="cursor-pointer hover:bg-gray-50"
@@ -627,7 +426,6 @@ export default function RecruiterApplicationsPage() {
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar>
-                            <AvatarImage src={application.candidateAvatar} />
                             <AvatarFallback>
                               {application.candidateName
                                 .split(" ")
@@ -644,43 +442,42 @@ export default function RecruiterApplicationsPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div>
-                          <p className="font-medium text-sm">{application.jobTitle}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {application.jobDepartment}
-                          </p>
-                        </div>
+                        <p className="font-medium text-sm">{application.jobTitle}</p>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <Calendar className="w-3 h-3" />
-                          {application.appliedDate}
+                          {application.appliedAt?.toDate
+                            ? new Date(application.appliedAt.toDate()).toLocaleDateString()
+                            : "N/A"}
                         </div>
                       </TableCell>
                       <TableCell>
                         <Badge
                           variant="outline"
                           className={`${
-                            application.matchScore >= 90
+                            (application.aiAnalysis?.matchScore || 0) >= 90
                               ? "bg-green-50 text-green-700 border-green-200"
-                              : application.matchScore >= 80
+                              : (application.aiAnalysis?.matchScore || 0) >= 80
                               ? "bg-blue-50 text-blue-700 border-blue-200"
-                              : application.matchScore >= 70
+                              : (application.aiAnalysis?.matchScore || 0) >= 70
                               ? "bg-yellow-50 text-yellow-700 border-yellow-200"
                               : "bg-gray-50 text-gray-700 border-gray-200"
                           }`}
                         >
                           <Target className="w-3 h-3 mr-1" />
-                          {application.matchScore}%
+                          {application.aiAnalysis?.matchScore || 0}%
                         </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge
                           variant="outline"
-                          className={getRecommendationBadge(application.aiRecommendation)}
+                          className={getRecommendationBadge(
+                            application.aiAnalysis?.recommendation || "Not Recommended"
+                          )}
                         >
                           <Sparkles className="w-3 h-3 mr-1" />
-                          {application.aiRecommendation}
+                          {application.aiAnalysis?.recommendation || "Pending"}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -688,8 +485,7 @@ export default function RecruiterApplicationsPage() {
                           variant="outline"
                           className={getStatusBadge(application.status)}
                         >
-                          {application.status.charAt(0).toUpperCase() +
-                            application.status.slice(1)}
+                          {application.status}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -751,15 +547,6 @@ export default function RecruiterApplicationsPage() {
                   ))}
                 </TableBody>
               </Table>
-
-              {filteredApplications.length === 0 && (
-                <div className="text-center py-12">
-                  <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No applications found</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Try adjusting your search or filters
-                  </p>
-                </div>
               )}
             </CardContent>
           </Card>
@@ -783,7 +570,6 @@ export default function RecruiterApplicationsPage() {
                 {/* Header Section */}
                 <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
                   <Avatar className="w-16 h-16">
-                    <AvatarImage src={selectedApplication.candidateAvatar} />
                     <AvatarFallback className="text-xl">
                       {selectedApplication.candidateName
                         .split(" ")
@@ -806,20 +592,19 @@ export default function RecruiterApplicationsPage() {
                           variant="outline"
                           className={getStatusBadge(selectedApplication.status)}
                         >
-                          {selectedApplication.status.charAt(0).toUpperCase() +
-                            selectedApplication.status.slice(1)}
+                          {selectedApplication.status}
                         </Badge>
                         <Badge
                           variant="outline"
                           className={`${
-                            selectedApplication.matchScore >= 90
+                            (selectedApplication.aiAnalysis?.matchScore || 0) >= 90
                               ? "bg-green-50 text-green-700 border-green-200"
-                              : selectedApplication.matchScore >= 80
+                              : (selectedApplication.aiAnalysis?.matchScore || 0) >= 80
                               ? "bg-blue-50 text-blue-700 border-blue-200"
                               : "bg-gray-50 text-gray-700 border-gray-200"
                           }`}
                         >
-                          {selectedApplication.matchScore}% Match
+                          {selectedApplication.aiAnalysis?.matchScore || 0}% Match
                         </Badge>
                       </div>
                     </div>
@@ -828,210 +613,124 @@ export default function RecruiterApplicationsPage() {
                         <Mail className="w-4 h-4" />
                         {selectedApplication.candidateEmail}
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Phone className="w-4 h-4" />
-                        {selectedApplication.candidatePhone}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <MapPin className="w-4 h-4" />
-                        {selectedApplication.location}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Briefcase className="w-4 h-4" />
-                        {selectedApplication.experience}
-                      </div>
+                      {selectedApplication.candidatePhone && (
+                        <div className="flex items-center gap-1">
+                          <Phone className="w-4 h-4" />
+                          {selectedApplication.candidatePhone}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
 
                 {/* AI Analysis */}
-                <Card className="border-purple-200 bg-purple-50">
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-purple-600" />
-                      AI Analysis & Recommendation
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <Badge
-                        variant="outline"
-                        className={getRecommendationBadge(
-                          selectedApplication.aiRecommendation
-                        )}
-                      >
-                        {selectedApplication.aiRecommendation}
-                      </Badge>
-                    </div>
-                    <p className="text-muted-foreground">
-                      {selectedApplication.aiSummary}
-                    </p>
-
-                    <div className="grid grid-cols-2 gap-4">
+                {selectedApplication.aiAnalysis && (
+                  <Card className="border-purple-200 bg-purple-50">
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-purple-600" />
+                        AI Analysis & Recommendation
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
                       <div>
-                        <h4 className="font-semibold text-sm mb-2 flex items-center gap-2 text-green-700">
-                          <ThumbsUp className="w-4 h-4" />
-                          Strengths
-                        </h4>
-                        <ul className="space-y-1">
-                          {selectedApplication.strengths.map((strength, index) => (
-                            <li key={index} className="text-sm flex items-start gap-2">
-                              <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                              <span>{strength}</span>
-                            </li>
-                          ))}
-                        </ul>
+                        <Badge
+                          variant="outline"
+                          className={getRecommendationBadge(
+                            selectedApplication.aiAnalysis.recommendation || "Not Recommended"
+                          )}
+                        >
+                          {selectedApplication.aiAnalysis.recommendation || "Pending"}
+                        </Badge>
                       </div>
-                      {selectedApplication.concerns.length > 0 && (
-                        <div>
-                          <h4 className="font-semibold text-sm mb-2 flex items-center gap-2 text-orange-700">
-                            <ThumbsDown className="w-4 h-4" />
-                            Concerns
-                          </h4>
-                          <ul className="space-y-1">
-                            {selectedApplication.concerns.map((concern, index) => (
-                              <li key={index} className="text-sm flex items-start gap-2">
-                                <AlertCircle className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
-                                <span>{concern}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Tabs */}
-                <Tabs defaultValue="details" className="w-full">
-                  <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="details">Details</TabsTrigger>
-                    <TabsTrigger value="resume">Resume & Documents</TabsTrigger>
-                    <TabsTrigger value="timeline">Timeline</TabsTrigger>
-                    <TabsTrigger value="notes">Notes</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="details" className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-lg">Skills</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="flex flex-wrap gap-2">
-                            {selectedApplication.skills.map((skill, index) => (
-                              <Badge key={index} variant="secondary">
-                                {skill}
-                              </Badge>
-                            ))}
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-lg flex items-center gap-2">
-                            <GraduationCap className="w-5 h-5" />
-                            Education
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-muted-foreground">
-                            {selectedApplication.education}
-                          </p>
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    {selectedApplication.expectedSalary && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-lg">Compensation & Availability</CardTitle>
-                        </CardHeader>
-                        <CardContent className="grid grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-sm text-muted-foreground mb-1">Expected Salary</p>
-                            <p className="font-medium">{selectedApplication.expectedSalary}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground mb-1">Notice Period</p>
-                            <p className="font-medium">{selectedApplication.noticePeriod}</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {selectedApplication.coverLetter && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-lg">Cover Letter</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-muted-foreground whitespace-pre-wrap">
-                            {selectedApplication.coverLetter}
-                          </p>
-                        </CardContent>
-                      </Card>
-                    )}
-                  </TabsContent>
-
-                  <TabsContent value="resume">
-                    <Card>
-                      <CardContent className="pt-6">
-                        <div className="text-center space-y-4">
-                          <FileText className="w-16 h-16 text-muted-foreground mx-auto" />
-                          <div>
-                            <p className="font-medium mb-2">Resume</p>
-                            <p className="text-sm text-muted-foreground mb-4">
-                              {selectedApplication.resumeUrl}
-                            </p>
-                            <Button className="gap-2">
-                              <DownloadIcon className="w-4 h-4" />
-                              Download Resume
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-
-                  <TabsContent value="timeline">
-                    <Card>
-                      <CardContent className="pt-6">
-                        <div className="space-y-4">
-                          <div className="flex gap-4">
-                            <div className="w-2 h-2 rounded-full bg-blue-500 mt-2"></div>
-                            <div>
-                              <p className="font-medium">Application Submitted</p>
-                              <p className="text-sm text-muted-foreground">
-                                {selectedApplication.appliedDate}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex gap-4">
-                            <div className="w-2 h-2 rounded-full bg-yellow-500 mt-2"></div>
-                            <div>
-                              <p className="font-medium">Under Review</p>
-                              <p className="text-sm text-muted-foreground">
-                                {selectedApplication.lastUpdated}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-
-                  <TabsContent value="notes">
-                    <Card>
-                      <CardContent className="pt-6">
-                        <p className="text-center text-muted-foreground">
-                          No notes yet. Add your first note about this application.
+                      {selectedApplication.aiAnalysis.oneLiner && (
+                        <p className="text-sm font-medium">
+                          {selectedApplication.aiAnalysis.oneLiner}
                         </p>
-                      </CardContent>
-                    </Card>
-                  </TabsContent>
-                </Tabs>
+                      )}
+                      {selectedApplication.aiAnalysis.executiveSummary && (
+                        <p className="text-muted-foreground">
+                          {selectedApplication.aiAnalysis.executiveSummary}
+                        </p>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-4">
+                        {selectedApplication.aiAnalysis.strengths &&
+                         selectedApplication.aiAnalysis.strengths.length > 0 && (
+                          <div>
+                            <h4 className="font-semibold text-sm mb-2 flex items-center gap-2 text-green-700">
+                              <ThumbsUp className="w-4 h-4" />
+                              Strengths
+                            </h4>
+                            <ul className="space-y-1">
+                              {selectedApplication.aiAnalysis.strengths.map((strength, index) => (
+                                <li key={index} className="text-sm flex items-start gap-2">
+                                  <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                  <span>{strength}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {selectedApplication.aiAnalysis.redFlags &&
+                         selectedApplication.aiAnalysis.redFlags.length > 0 && (
+                          <div>
+                            <h4 className="font-semibold text-sm mb-2 flex items-center gap-2 text-orange-700">
+                              <AlertCircle className="w-4 h-4" />
+                              Red Flags
+                            </h4>
+                            <ul className="space-y-1">
+                              {selectedApplication.aiAnalysis.redFlags.map((flag, index) => (
+                                <li key={index} className="text-sm flex items-start gap-2">
+                                  <AlertCircle className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                                  <span>{flag}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Resume Section */}
+                {selectedApplication.resumeUrl && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Resume</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <FileText className="w-8 h-8 text-muted-foreground" />
+                          <div>
+                            <p className="font-medium">Resume.pdf</p>
+                            <p className="text-sm text-muted-foreground">View or download resume</p>
+                          </div>
+                        </div>
+                        <Button variant="outline" className="gap-2">
+                          <DownloadIcon className="w-4 h-4" />
+                          Download
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Cover Letter */}
+                {selectedApplication.coverLetter && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Cover Letter</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground whitespace-pre-wrap">
+                        {selectedApplication.coverLetter}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Actions */}
                 <div className="flex gap-3">

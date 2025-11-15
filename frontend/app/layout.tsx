@@ -32,10 +32,12 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <AuthProvider>
-          <MockAuthProvider>
-            {children}
-            <RoleSwitcher />
-          </MockAuthProvider>
+          {process.env.NODE_ENV === 'development' && (
+            <MockAuthProvider>
+              <RoleSwitcher />
+            </MockAuthProvider>
+          )}
+          {children}
         </AuthProvider>
       </body>
     </html>
