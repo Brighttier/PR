@@ -84,11 +84,6 @@ env:
       - BUILD
       - RUNTIME
 
-  - variable: SENDGRID_API_KEY
-    secret: SENDGRID_API_KEY
-    availability:
-      - RUNTIME
-
   - variable: RESEND_API_KEY
     secret: RESEND_API_KEY
     availability:
@@ -97,27 +92,6 @@ env:
   # Optional: Stripe integration
   - variable: STRIPE_SECRET_KEY
     secret: STRIPE_SECRET_KEY
-    availability:
-      - RUNTIME
-
-  - variable: STRIPE_WEBHOOK_SECRET
-    secret: STRIPE_WEBHOOK_SECRET
-    availability:
-      - RUNTIME
-
-  # Optional: Meeting bot webhooks
-  - variable: ZOOM_WEBHOOK_SECRET
-    secret: ZOOM_WEBHOOK_SECRET
-    availability:
-      - RUNTIME
-
-  - variable: TEAMS_WEBHOOK_SECRET
-    secret: TEAMS_WEBHOOK_SECRET
-    availability:
-      - RUNTIME
-
-  - variable: MEET_WEBHOOK_SECRET
-    secret: MEET_WEBHOOK_SECRET
     availability:
       - RUNTIME
 
