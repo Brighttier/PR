@@ -22,11 +22,13 @@
     "rules": "storage.rules"
   },
   "apphosting": {
-    "source": "frontend",
-    "buildConfig": {
-      "runtime": "nodejs20",
-      "buildCommand": "npm run build",
-      "installCommand": "npm ci"
+    "persona-recruit-frontend": {
+      "source": "frontend",
+      "buildConfig": {
+        "runtime": "nodejs20",
+        "buildCommand": "npm run build",
+        "installCommand": "npm ci"
+      }
     }
   },
   "emulators": {
