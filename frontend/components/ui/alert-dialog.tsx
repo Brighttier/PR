@@ -119,6 +119,30 @@ function AlertDialogClose(props: AlertDialogPrimitive.Close.Props) {
   )
 }
 
+const AlertDialogAction = React.forwardRef<
+  HTMLButtonElement,
+  React.ButtonHTMLAttributes<HTMLButtonElement>
+>(({ className, ...props }, ref) => (
+  <AlertDialogPrimitive.Close
+    ref={ref}
+    className={className}
+    {...props}
+  />
+))
+AlertDialogAction.displayName = "AlertDialogAction"
+
+const AlertDialogCancel = React.forwardRef<
+  HTMLButtonElement,
+  React.ButtonHTMLAttributes<HTMLButtonElement>
+>(({ className, ...props }, ref) => (
+  <AlertDialogPrimitive.Close
+    ref={ref}
+    className={className}
+    {...props}
+  />
+))
+AlertDialogCancel.displayName = "AlertDialogCancel"
+
 export {
   AlertDialog,
   AlertDialogPortal,
@@ -132,4 +156,6 @@ export {
   AlertDialogTitle,
   AlertDialogDescription,
   AlertDialogClose,
+  AlertDialogAction,
+  AlertDialogCancel,
 }
