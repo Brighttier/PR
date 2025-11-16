@@ -31,6 +31,7 @@ import {
   Mail,
   Briefcase,
   ChevronDown,
+  Settings,
 } from "lucide-react";
 import {
   Select,
