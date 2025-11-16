@@ -256,7 +256,7 @@ export function SkillsComparison({
       skill: reqSkill,
       candidateScore: candidateSkill?.score || 0,
       requiredScore: 7, // Assume 7/10 is required
-      hasSk ill: !!candidateSkill,
+      hasSkill: !!candidateSkill,
     };
   });
 

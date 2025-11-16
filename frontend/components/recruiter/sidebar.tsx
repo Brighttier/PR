@@ -21,7 +21,7 @@ interface RecruiterSidebarProps {
   onLogout?: () => void;
 }
 
-export default function RecruiterSidebar({
+function RecruiterSidebar({
   user,
   companyName,
   onLogout,
@@ -74,3 +74,9 @@ export default function RecruiterSidebar({
     />
   );
 }
+
+// Named export for imports
+export { RecruiterSidebar };
+
+// Default export for backward compatibility
+export default RecruiterSidebar;

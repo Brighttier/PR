@@ -228,11 +228,6 @@ export default function RecruiterJobsPage() {
     }
   };
 
-  const handleViewJob = (job: Job) => {
-    setSelectedJob(job);
-    setDetailsOpen(true);
-  };
-
   return (
     <div className="flex h-screen bg-gray-50">
       <RecruiterSidebar />

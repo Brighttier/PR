@@ -314,6 +314,5 @@ export default function InterviewerDashboard() {
         </div>
       </div>
     </div>
-    </div>
   );
 }
