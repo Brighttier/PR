@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import ResumePreviewCard from "@/components/candidate/resume-preview-card";
+import VideoRecorder from "@/components/candidate/video-recorder";
 import {
   User,
   Mail,
@@ -45,7 +46,7 @@ interface FormData {
   linkedinUrl: string;
   yearsOfExperience: number;
 
-  // Step 3: Resume
+  // Step 3: Resume & Video
   resumeFile: File | null;
   resumeUrl?: string;
   parsedData?: {
@@ -53,6 +54,8 @@ interface FormData {
     experience: string;
     education: string;
   };
+  videoBlob: Blob | null;
+  videoUrl?: string;
 
   // Step 4: Preferences
   desiredJobTitles: string[];
@@ -87,6 +90,7 @@ export default function CandidateSignupWizard() {
     linkedinUrl: "",
     yearsOfExperience: 0,
     resumeFile: null,
+    videoBlob: null,
     desiredJobTitles: [],
     preferredLocations: [],
     remotePreference: "any",
@@ -236,7 +240,20 @@ export default function CandidateSignupWizard() {
         );
         await uploadBytes(resumeRef, formData.resumeFile);
         resumeUrl = await getDownloadURL(resumeRef);
+        setUploadProgress(50);
+      }
+
+      // 2.5. Upload video introduction if recorded
+      let videoUrl = "";
+      if (formData.videoBlob) {
         setUploadProgress(60);
+        const videoRef = ref(
+          storage,
+          `videos/candidates/${userId}/introduction.webm`
+        );
+        await uploadBytes(videoRef, formData.videoBlob);
+        videoUrl = await getDownloadURL(videoRef);
+        setUploadProgress(70);
       }
 
       // 3. Create user profile in Firestore
@@ -254,6 +271,7 @@ export default function CandidateSignupWizard() {
           linkedinUrl: formData.linkedinUrl,
           yearsOfExperience: formData.yearsOfExperience,
           resumeUrl,
+          videoIntroductionUrl: videoUrl || null,
           preferences: {
             desiredJobTitles: formData.desiredJobTitles,
             preferredLocations: formData.preferredLocations,
@@ -619,6 +637,17 @@ export default function CandidateSignupWizard() {
                     <AlertDescription>{parsingStatus}</AlertDescription>
                   </Alert>
                 )}
+
+                {/* Video Introduction (Optional) */}
+                <div className="mt-6">
+                  <VideoRecorder
+                    onVideoRecorded={(blob, url) => {
+                      updateFormData({ videoBlob: blob, videoUrl: url });
+                    }}
+                    maxDuration={120}
+                    required={false}
+                  />
+                </div>
               </div>
             )}
 

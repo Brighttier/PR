@@ -36,6 +36,19 @@ service firebase.storage {
                      (hasRole('recruiter') || hasRole('hr_admin') || hasRole('interviewer'));
     }
 
+    // Video introductions uploaded by candidates during signup
+    match /videos/candidates/{candidateId}/{fileName} {
+      // Candidates can upload their own video introductions
+      allow write: if isAuthenticated() && isOwner(candidateId);
+
+      // Candidates can read their own videos
+      allow read: if isAuthenticated() && isOwner(candidateId);
+
+      // Recruiters, HR Admins, and Interviewers can read any candidate videos
+      allow read: if isAuthenticated() &&
+                     (hasRole('recruiter') || hasRole('hr_admin') || hasRole('interviewer'));
+    }
+
     // Resumes uploaded by candidates for specific company applications
     match /resumes/{companyId}/{candidateId}/{fileName} {
       // Candidates can upload their own resumes
