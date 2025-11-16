@@ -101,3 +101,4 @@ buildConfig:
   rootDirectory: frontend
   buildCommand: npm run build:webpack
   installCommand: npm ci
+  runCommand: npm start
