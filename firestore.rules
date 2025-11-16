@@ -52,6 +52,12 @@ service cloud.firestore {
       // Users can update their own profile (limited fields)
       allow update: if isAuthenticated() && isOwner(userId);
 
+      // Users can create their own profile during signup
+      // This allows candidates to self-register
+      allow create: if isAuthenticated() &&
+                       isOwner(userId) &&
+                       request.resource.data.uid == userId;
+
       // Platform admins can read all users
       allow read: if isPlatformAdmin();
 

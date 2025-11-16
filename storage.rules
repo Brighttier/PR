@@ -23,7 +23,20 @@ service firebase.storage {
       return request.auth.token.companyId == companyId;
     }
 
-    // Resumes uploaded by candidates
+    // Resumes uploaded by candidates during signup (before assigned to company)
+    match /resumes/candidates/{candidateId}/{fileName} {
+      // Candidates can upload their own resumes
+      allow write: if isAuthenticated() && isOwner(candidateId);
+
+      // Candidates can read their own resumes
+      allow read: if isAuthenticated() && isOwner(candidateId);
+
+      // Recruiters, HR Admins, and Interviewers can read any candidate resumes
+      allow read: if isAuthenticated() &&
+                     (hasRole('recruiter') || hasRole('hr_admin') || hasRole('interviewer'));
+    }
+
+    // Resumes uploaded by candidates for specific company applications
     match /resumes/{companyId}/{candidateId}/{fileName} {
       // Candidates can upload their own resumes
       allow write: if isAuthenticated() && isOwner(candidateId);

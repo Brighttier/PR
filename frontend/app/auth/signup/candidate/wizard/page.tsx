@@ -316,15 +316,27 @@ export default function CandidateSignupWizard() {
     } catch (err: any) {
       console.error("Signup error:", err);
 
-      // User-friendly error messages
+      // User-friendly error messages based on error code/type
       if (err.code === "auth/email-already-in-use") {
         setError("An account with this email already exists. Please sign in instead.");
       } else if (err.code === "auth/weak-password") {
         setError("Password is too weak. Please choose a stronger password.");
       } else if (err.code === "auth/invalid-email") {
         setError("Please enter a valid email address.");
+      } else if (err.code === "auth/network-request-failed") {
+        setError("Network error. Please check your internet connection and try again.");
+      } else if (err.code === "auth/too-many-requests") {
+        setError("Too many attempts. Please try again later.");
+      } else if (err.code === "permission-denied" || err.message?.includes("permission") || err.message?.includes("Missing or insufficient permissions")) {
+        setError("Permission error. Please contact support if this persists.");
+      } else if (err.code === "storage/unauthorized") {
+        setError("Unable to upload resume. Please contact support.");
+      } else if (err.message?.includes("Failed to fetch")) {
+        setError("Network error. Please check your internet connection and try again.");
       } else {
-        setError("An error occurred during signup. Please try again.");
+        // Generic fallback with more helpful context
+        const errorMessage = err.message || "Unknown error";
+        setError(`Signup failed: ${errorMessage.substring(0, 100)}. Please try again or contact support.`);
       }
     } finally {
       setLoading(false);
