@@ -1,9 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Output configuration for Firebase App Hosting
-  output: "standalone",
-
   // Image optimization
   images: {
     domains: [
