@@ -25,7 +25,7 @@ interface CompanyAdminSidebarProps {
   onLogout?: () => void;
 }
 
-export default function CompanyAdminSidebar({
+function CompanyAdminSidebar({
   user,
   companyName,
   onLogout,
@@ -98,3 +98,9 @@ export default function CompanyAdminSidebar({
     />
   );
 }
+
+// Named export for imports
+export { CompanyAdminSidebar };
+
+// Default export for backward compatibility
+export default CompanyAdminSidebar;
