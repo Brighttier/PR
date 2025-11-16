@@ -72,11 +72,9 @@ export default function MobileNav({
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="md:hidden">
-          <Menu className="h-5 w-5" />
-          <span className="sr-only">Toggle navigation menu</span>
-        </Button>
+      <SheetTrigger className="inline-flex items-center justify-center rounded-lg p-2 text-muted-foreground hover:bg-accent hover:text-foreground md:hidden">
+        <Menu className="h-5 w-5" />
+        <span className="sr-only">Toggle navigation menu</span>
       </SheetTrigger>
       <SheetContent side="left" className="w-64 p-0">
         <div className="flex flex-col h-full">

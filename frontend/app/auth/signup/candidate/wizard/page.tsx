@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
+import ResumePreviewCard from "@/components/candidate/resume-preview-card";
 import {
   User,
   Mail,
@@ -70,6 +71,11 @@ export default function CandidateSignupWizard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [parsingStatus, setParsingStatus] = useState<string>("");
+  const [parsedData, setParsedData] = useState<any>(null);
+  const [skillSuggestions, setSkillSuggestions] = useState<string[]>([]);
+  const [showPreview, setShowPreview] = useState(false);
+  const [userId, setUserId] = useState<string>("");
 
   const [formData, setFormData] = useState<FormData>({
     fullName: "",
@@ -218,6 +224,7 @@ export default function CandidateSignupWizard() {
       );
 
       const userId = userCredential.user.uid;
+      setUserId(userId); // Store userId in state for job recommendations
 
       // 2. Upload resume to Firebase Storage
       let resumeUrl = "";
@@ -267,17 +274,45 @@ export default function CandidateSignupWizard() {
 
       setUploadProgress(90);
 
-      // 4. TODO: Trigger AI resume parsing Cloud Function
-      // This will be implemented in Phase 5
-      // await fetch('/api/ai/parse-resume', {
-      //   method: 'POST',
-      //   body: JSON.stringify({ userId, resumeUrl })
-      // });
+      // 4. Trigger AI resume parsing with progress updates
+      setParsingStatus("Analyzing your resume with AI...");
+      try {
+        const parseResponse = await fetch('/api/ai/parse-resume', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId, resumeUrl })
+        });
+
+        if (parseResponse.ok) {
+          const parseResult = await parseResponse.json();
+          console.log('✅ Resume parsed successfully:', parseResult);
+          setParsingStatus("Resume parsed successfully!");
+          setParsedData(parseResult.parsedData);
+          setSkillSuggestions(parseResult.skillSuggestions || []);
+
+          // Show preview of parsed data
+          setShowPreview(true);
+          setUploadProgress(100);
+
+          // Auto-close preview and redirect after 5 seconds, or user can click Continue
+          return; // Don't redirect yet, wait for user to review
+        } else {
+          console.warn('⚠️ Resume parsing failed, continuing without parsed data');
+          setParsingStatus("Resume parsing failed, but your account was created successfully.");
+        }
+      } catch (parseError) {
+        console.error('Resume parsing error:', parseError);
+        setParsingStatus("Resume parsing failed, but your account was created successfully.");
+      }
 
       setUploadProgress(100);
 
-      // 5. Redirect to candidate dashboard
-      router.push("/candidate");
+      // 5. Redirect to candidate dashboard (only if not showing preview)
+      if (!showPreview) {
+        setTimeout(() => router.push("/candidate"), 2000);
+      }
     } catch (err: any) {
       console.error("Signup error:", err);
 
@@ -323,22 +358,31 @@ export default function CandidateSignupWizard() {
           <Progress value={progressPercentage} className="h-2" />
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {currentStep === 1 && "Create Your Account"}
-              {currentStep === 2 && "Profile Information"}
-              {currentStep === 3 && "Upload Your Resume"}
-              {currentStep === 4 && "Preferences & Consent"}
-            </CardTitle>
-            <CardDescription>
-              {currentStep === 1 && "Enter your email and create a password"}
-              {currentStep === 2 && "Tell us a bit about yourself"}
-              {currentStep === 3 && "Upload your resume for AI analysis"}
-              {currentStep === 4 && "Set your job preferences and review consents"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        {/* Conditionally render preview or wizard */}
+        {showPreview ? (
+          <ResumePreviewCard
+            parsedData={parsedData}
+            skillSuggestions={skillSuggestions}
+            userId={userId}
+            onContinue={() => router.push("/candidate")}
+          />
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {currentStep === 1 && "Create Your Account"}
+                {currentStep === 2 && "Profile Information"}
+                {currentStep === 3 && "Upload Your Resume"}
+                {currentStep === 4 && "Preferences & Consent"}
+              </CardTitle>
+              <CardDescription>
+                {currentStep === 1 && "Enter your email and create a password"}
+                {currentStep === 2 && "Tell us a bit about yourself"}
+                {currentStep === 3 && "Upload your resume for AI analysis"}
+                {currentStep === 4 && "Set your job preferences and review consents"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
             {error && (
               <Alert variant="destructive" className="mb-6">
                 <AlertCircle className="h-4 w-4" />
@@ -552,6 +596,17 @@ export default function CandidateSignupWizard() {
                     <Progress value={uploadProgress} />
                   </div>
                 )}
+
+                {parsingStatus && (
+                  <Alert className="mt-4">
+                    {parsingStatus.includes("Analyzing") ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                    )}
+                    <AlertDescription>{parsingStatus}</AlertDescription>
+                  </Alert>
+                )}
               </div>
             )}
 
@@ -694,13 +749,16 @@ export default function CandidateSignupWizard() {
             </div>
           </CardContent>
         </Card>
+        )}
 
-        <p className="text-center text-sm text-muted-foreground mt-6">
-          Already have an account?{" "}
-          <a href="/auth/login" className="text-primary hover:underline">
-            Sign in
-          </a>
-        </p>
+        {!showPreview && (
+          <p className="text-center text-sm text-muted-foreground mt-6">
+            Already have an account?{" "}
+            <a href="/auth/login" className="text-primary hover:underline">
+              Sign in
+            </a>
+          </p>
+        )}
       </div>
     </div>
   );

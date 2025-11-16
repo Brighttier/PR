@@ -169,16 +169,22 @@ export default function LoginPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <Button variant="outline" asChild>
-                  <Link href="/auth/signup/candidate">
-                    Join as Candidate
-                  </Link>
-                </Button>
-                <Button variant="outline" asChild>
-                  <Link href="/auth/signup/company">
-                    Join as Company
-                  </Link>
-                </Button>
+                <Button
+                  variant="outline"
+                  render={(props) => (
+                    <Link href="/auth/signup/candidate" {...props}>
+                      Join as Candidate
+                    </Link>
+                  )}
+                />
+                <Button
+                  variant="outline"
+                  render={(props) => (
+                    <Link href="/auth/signup/company" {...props}>
+                      Join as Company
+                    </Link>
+                  )}
+                />
               </div>
             </div>
           </CardContent>

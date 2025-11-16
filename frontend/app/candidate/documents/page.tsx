@@ -408,65 +408,9 @@ export default function DocumentsPage() {
   const categories = Array.from(new Set(documents.map((d) => d.category)));
 
   return (
-    <div className="flex h-screen bg-background">
-      {/* Sidebar */}
-      <aside className="w-64 border-r bg-card flex flex-col">
-        <div className="p-6 border-b">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <Briefcase className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="font-bold text-lg">Persona Recruit</h1>
-              <p className="text-xs text-muted-foreground">Candidate Portal</p>
-            </div>
-          </div>
-        </div>
-
-        <nav className="flex-1 p-4 space-y-1">
-          <a href="/candidate" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-muted">
-            <FileText className="w-5 h-5" />
-            <span className="font-medium">Dashboard</span>
-          </a>
-          <a href="/candidate/applications" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-muted">
-            <Briefcase className="w-5 h-5" />
-            <span className="font-medium">My Applications</span>
-          </a>
-          <a href="/candidate/interviews" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-muted">
-            <Calendar className="w-5 h-5" />
-            <span className="font-medium">Interviews</span>
-          </a>
-          <a href="/candidate/profile" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:bg-muted">
-            <FileText className="w-5 h-5" />
-            <span className="font-medium">My Profile</span>
-          </a>
-          <a href="/candidate/documents" className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-primary text-primary-foreground">
-            <File className="w-5 h-5" />
-            <span className="font-medium">My Documents</span>
-            {stats.pending > 0 && (
-              <Badge variant="secondary" className="ml-auto bg-yellow-500 text-white">
-                {stats.pending}
-              </Badge>
-            )}
-          </a>
-        </nav>
-
-        <div className="p-4 border-t">
-          <div className="flex items-center gap-3">
-            <Avatar className="w-10 h-10 bg-primary text-primary-foreground flex items-center justify-center font-semibold">
-              JC
-            </Avatar>
-            <div className="flex-1">
-              <p className="font-medium text-sm">John Candidate</p>
-              <p className="text-xs text-muted-foreground">candidate@example.com</p>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto bg-muted/30">
-        <header className="border-b bg-card sticky top-0 z-10">
+    <div className="p-6 space-y-6">
+      <div className="space-y-6">
+        <header className="border-b bg-card -m-6 mb-0">
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -663,12 +607,15 @@ export default function DocumentsPage() {
                           <div className="flex gap-2">
                             {doc.status === "pending" ? (
                               <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button size="sm">
-                                    <Upload className="w-4 h-4 mr-2" />
-                                    Upload
-                                  </Button>
-                                </DialogTrigger>
+                                <Button
+                                  size="sm"
+                                  render={(props) => (
+                                    <DialogTrigger {...props}>
+                                      <Upload className="w-4 h-4 mr-2" />
+                                      Upload
+                                    </DialogTrigger>
+                                  )}
+                                />
                                 <DialogContent>
                                   <DialogHeader>
                                     <DialogTitle>Upload {doc.name}</DialogTitle>
@@ -732,7 +679,7 @@ export default function DocumentsPage() {
             </Card>
           )}
         </div>
-      </main>
+      </div>
     </div>
   );
 }
