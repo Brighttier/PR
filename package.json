@@ -1,0 +1,10 @@
+{
+  "name": "persona-recruit-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install": "cd frontend && npm ci",
+    "build": "cd frontend && npm run build:webpack",
+    "start": "cd frontend && npm start"
+  }
+}
