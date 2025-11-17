@@ -64,7 +64,7 @@ export default function Home() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-20 sm:py-32">
+      <section className="relative overflow-hidden py-16 sm:py-24 md:py-32">
         <div className="absolute inset-0 -z-10 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
         <div className="absolute left-0 top-0 -z-10 h-full w-full">
           <div className="absolute top-0 -left-4 w-72 h-72 bg-green-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob" />
@@ -72,8 +72,8 @@ export default function Home() {
           <div className="absolute -bottom-8 left-20 w-72 h-72 bg-green-200 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000" />
         </div>
 
-        <div className="container relative">
-          <div className="mx-auto max-w-4xl text-center space-y-8">
+        <div className="container relative mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-4xl text-center space-y-6 sm:space-y-8">
             <Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-green-200">
               <Sparkles className="h-3 w-3 mr-1" />
               Powered by Advanced AI
@@ -92,31 +92,31 @@ export default function Home() {
               and data-driven insights. Reduce time-to-hire by 70% while finding the perfect fit.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-2">
               <Link href="/auth/signup/company/wizard">
-                <Button size="lg" className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 h-12 px-8 text-base group">
+                <Button size="lg" className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 h-12 px-8 text-base group w-full sm:w-auto">
                   Start Free 14-Day Trial
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
               <Link href="#demo">
-                <Button size="lg" variant="outline" className="h-12 px-8 text-base border-2">
+                <Button size="lg" variant="outline" className="h-12 px-8 text-base border-2 w-full sm:w-auto">
                   Watch Demo
                 </Button>
               </Link>
             </div>
 
-            <div className="flex items-center justify-center gap-8 pt-4 text-sm text-muted-foreground">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 pt-6 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
                 <span>No credit card required</span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
                 <span>14-day free trial</span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <CheckCircle2 className="h-4 w-4 text-green-600 flex-shrink-0" />
                 <span>Cancel anytime</span>
               </div>
             </div>
@@ -143,9 +143,9 @@ export default function Home() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-20 bg-background">
-        <div className="container">
-          <div className="text-center space-y-4 mb-16">
+      <section id="features" className="py-16 sm:py-20 bg-background">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center space-y-4 mb-12 sm:mb-16">
             <Badge variant="outline" className="border-green-200 text-green-700">
               Features
             </Badge>
@@ -237,9 +237,9 @@ export default function Home() {
       </section>
 
       {/* Social Proof */}
-      <section id="testimonials" className="py-20 bg-gradient-to-b from-background to-green-50/20">
-        <div className="container">
-          <div className="text-center space-y-4 mb-16">
+      <section id="testimonials" className="py-16 sm:py-20 bg-gradient-to-b from-background to-green-50/20">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center space-y-4 mb-12 sm:mb-16">
             <Badge variant="outline" className="border-green-200 text-green-700">
               Testimonials
             </Badge>
@@ -308,9 +308,9 @@ export default function Home() {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-20 bg-background">
-        <div className="container">
-          <div className="text-center space-y-4 mb-16">
+      <section id="pricing" className="py-16 sm:py-20 bg-background">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center space-y-4 mb-12 sm:mb-16">
             <Badge variant="outline" className="border-green-200 text-green-700">
               Pricing
             </Badge>
@@ -425,9 +425,9 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-br from-green-600 via-green-500 to-green-600 text-white">
-        <div className="container">
-          <div className="max-w-3xl mx-auto text-center space-y-8">
+      <section className="py-16 sm:py-20 bg-gradient-to-br from-green-600 via-green-500 to-green-600 text-white">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-3xl mx-auto text-center space-y-6 sm:space-y-8">
             <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-white/20 backdrop-blur">
               <Rocket className="h-8 w-8" />
             </div>
@@ -457,7 +457,7 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t bg-background py-12">
-        <div className="container">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2 mb-4">
