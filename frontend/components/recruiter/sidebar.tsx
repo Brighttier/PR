@@ -8,6 +8,12 @@ import {
   Folder,
   Calendar,
   Settings,
+  GitBranch,
+  UserPlus,
+  ClipboardCheck,
+  MessageSquare,
+  Award,
+  UserCheck,
 } from "lucide-react";
 import BaseSidebar, { NavItem } from "@/components/layout/base-sidebar";
 
@@ -46,6 +52,38 @@ function RecruiterSidebar({
       href: "/recruiter/candidates",
       label: "Candidates",
       icon: Users,
+    },
+    // Recruitment Lifecycle Module
+    {
+      label: "Recruitment Lifecycle",
+      icon: GitBranch,
+      children: [
+        {
+          href: "/recruiter/lifecycle/sourcing",
+          label: "Sourcing",
+          icon: UserPlus,
+        },
+        {
+          href: "/recruiter/lifecycle/screening",
+          label: "Screening",
+          icon: ClipboardCheck,
+        },
+        {
+          href: "/recruiter/lifecycle/interviews",
+          label: "Interviews",
+          icon: MessageSquare,
+        },
+        {
+          href: "/recruiter/lifecycle/offers",
+          label: "Offers",
+          icon: Award,
+        },
+        {
+          href: "/recruiter/lifecycle/onboarding",
+          label: "Onboarding",
+          icon: UserCheck,
+        },
+      ],
     },
     {
       href: "/recruiter/talent-pool",

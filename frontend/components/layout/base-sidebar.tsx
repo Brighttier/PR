@@ -2,17 +2,24 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { LucideIcon } from "lucide-react";
+import { useState } from "react";
+import { LucideIcon, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { LogOut } from "lucide-react";
 
 export interface NavItem {
-  href: string;
+  href?: string;
   label: string;
   icon: LucideIcon;
   badge?: string | number;
+  children?: NavItem[];
 }
 
 interface BaseSidebarProps {
@@ -102,14 +109,64 @@ export default function BaseSidebar({
 
       {/* Navigation Links */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
+        {navItems.map((item, index) => {
           const Icon = item.icon;
-          const active = isActive(item.href);
+
+          // Handle items with children (collapsible sections)
+          if (item.children && item.children.length > 0) {
+            const hasActiveChild = item.children.some(
+              (child) => child.href && isActive(child.href)
+            );
+
+            return (
+              <Collapsible key={`${item.label}-${index}`} defaultOpen={hasActiveChild}>
+                <CollapsibleTrigger className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-muted-foreground hover:bg-muted hover:text-foreground group">
+                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  <span className="font-medium text-sm flex-1 text-left">{item.label}</span>
+                  <ChevronDown className="w-4 h-4 transition-transform group-data-[state=open]:rotate-180" />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-1">
+                  <div className="space-y-1 ml-4 pl-4 border-l-2 border-muted">
+                    {item.children.map((child) => {
+                      const ChildIcon = child.icon;
+                      const childActive = child.href ? isActive(child.href) : false;
+
+                      return (
+                        <Link
+                          key={child.href}
+                          href={child.href!}
+                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm ${
+                            childActive
+                              ? `${colors.bg} ${colors.text}`
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                          }`}
+                        >
+                          <ChildIcon className="w-4 h-4 flex-shrink-0" />
+                          <span className="font-medium flex-1">{child.label}</span>
+                          {child.badge !== undefined && (
+                            <Badge
+                              variant={childActive ? "secondary" : "outline"}
+                              className="text-xs"
+                            >
+                              {child.badge}
+                            </Badge>
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            );
+          }
+
+          // Handle regular items without children
+          const active = item.href ? isActive(item.href) : false;
 
           return (
             <Link
-              key={item.href}
-              href={item.href}
+              key={item.href || `${item.label}-${index}`}
+              href={item.href!}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                 active
                   ? `${colors.bg} ${colors.text}`
